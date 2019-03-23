@@ -1,38 +1,21 @@
 package com.hlebon.adsweb.repository.entity;
 
-import javax.persistence.Basic;
-import javax.persistence.Column;
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Table;
 import java.util.Objects;
 
 @Entity
-@Table(name = "ad", schema = "diplom", catalog = "gleb")
+@Table(name = "ad")
+@Getter
+@Setter
 public class AdEntity {
+    @Id
     private Long id;
     private String name;
-
-    @Basic
-    @Column(name = "id")
-    public Long getId() {
-        return id;
-    }
-
-    public _Dummy_ setId(Long id) {
-        this.id = id;
-        return this;
-    }
-
-    @Basic
-    @Column(name = "name")
-    public String getName() {
-        return name;
-    }
-
-    public _Dummy_ setName(String name) {
-        this.name = name;
-        return this;
-    }
 
     @Override
     public boolean equals(Object o) {
