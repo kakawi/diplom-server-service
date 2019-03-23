@@ -11,7 +11,6 @@ public class CampaignDto {
     private Long id;
     private String name;
     private Set<CampaignStatisticDto> campaignStatistics;
-    private Long currentValue;
 
     @Setter
     @Getter

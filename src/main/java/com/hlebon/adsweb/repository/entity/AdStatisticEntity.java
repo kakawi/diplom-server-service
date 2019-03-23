@@ -16,7 +16,7 @@ public class AdStatisticEntity {
     @Id
     private Long id;
     private Integer weekNumber;
-    private Long spend;
+    private Long spends;
     private Long impressions;
     private Long clicks;
     private Integer year;
@@ -28,7 +28,7 @@ public class AdStatisticEntity {
         AdStatisticEntity that = (AdStatisticEntity) o;
         return Objects.equals(id, that.id) &&
                 Objects.equals(weekNumber, that.weekNumber) &&
-                Objects.equals(spend, that.spend) &&
+                Objects.equals(spends, that.spends) &&
                 Objects.equals(impressions, that.impressions) &&
                 Objects.equals(clicks, that.clicks) &&
                 Objects.equals(year, that.year);
@@ -36,6 +36,6 @@ public class AdStatisticEntity {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, weekNumber, spend, impressions, clicks, year);
+        return Objects.hash(id, weekNumber, spends, impressions, clicks, year);
     }
 }

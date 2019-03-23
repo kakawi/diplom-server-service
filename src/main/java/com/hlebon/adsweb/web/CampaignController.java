@@ -30,8 +30,13 @@ public class CampaignController {
     }
 
     @GetMapping("/{campaignId}")
-    public CampaignDto findById(@PathVariable("campaignId") final Long campaignId) {
-        return campaignService.findById(campaignId);
+    public CampaignDto findById(
+            @PathVariable("campaignId") final Long campaignId,
+            @RequestParam(value = "isFetchStatistic", defaultValue = "false") boolean isFetchStatistic,
+            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue
+    ) {
+        final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue);
+        return campaignService.findById(campaignId, campaignSearchableObject);
     }
 
 }
