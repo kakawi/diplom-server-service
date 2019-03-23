@@ -1,44 +1,26 @@
 package com.hlebon.adsweb.service;
 
+import com.hlebon.adsweb.repository.dao.CampaignDao;
+import com.hlebon.adsweb.repository.entity.CampaignEntity;
 import com.hlebon.adsweb.web.dto.CampaignDto;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
 
 @Service
+@RequiredArgsConstructor
 public class CampaignService {
 
+    private final CampaignDao campaignDao;
+
     private List<CampaignDto> campaignDtos = asList(
-            CampaignDto.builder()
-                    .id(1L)
-                    .name("AdSet_from_server1")
-                    .impressionsHistory(asList(10L, 20L))
-                    .clicksHistory(asList(10L, 20L))
-                    .costHistory(asList(10L, 20L))
-                    .currentValue(100L)
-                    .build(),
-            CampaignDto.builder()
-                    .id(2L)
-                    .name("AdSet_from_server2")
-                    .impressionsHistory(asList(10L, 20L))
-                    .clicksHistory(asList(10L, 20L))
-                    .costHistory(asList(10L, 20L))
-                    .build(),
-            CampaignDto.builder()
-                    .id(3L)
-                    .name("AdSet_from_server3")
-                    .impressionsHistory(asList(10L, 20L))
-                    .clicksHistory(asList(10L, 20L))
-                    .costHistory(asList(10L, 20L))
-                    .build()
     );
 
-    public List<CampaignDto> findAll() {
-        final List<CampaignDto> result = new ArrayList<>();
-        result.addAll(campaignDtos);
+    public List<CampaignEntity> findAll() {
+        final List<CampaignEntity> result = campaignDao.findAll();
 
         return result;
     }
