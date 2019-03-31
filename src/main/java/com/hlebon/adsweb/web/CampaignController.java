@@ -22,9 +22,10 @@ public class CampaignController {
     @GetMapping()
     public List<CampaignDto> findAll(
             @RequestParam(value = "isFetchStatistic", defaultValue = "false") boolean isFetchStatistic,
-            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue
+            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue,
+            @RequestParam(value = "isFetchProductStatistic", defaultValue = "false") boolean isFetchProductStatistic
     ) {
-        final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue);
+        final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue, isFetchProductStatistic);
         final List<CampaignDto> dtos = campaignService.findAll(campaignSearchableObject);
         return dtos;
     }
@@ -33,9 +34,10 @@ public class CampaignController {
     public CampaignDto findById(
             @PathVariable("campaignId") final Long campaignId,
             @RequestParam(value = "isFetchStatistic", defaultValue = "false") boolean isFetchStatistic,
-            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue
+            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue,
+            @RequestParam(value = "isFetchProductStatistic", defaultValue = "false") boolean isFetchProductStatistic
     ) {
-        final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue);
+        final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue, isFetchProductStatistic);
         return campaignService.findById(campaignId, campaignSearchableObject);
     }
 

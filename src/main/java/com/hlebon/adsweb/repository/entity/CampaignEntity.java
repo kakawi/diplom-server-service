@@ -5,6 +5,8 @@ import lombok.Setter;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 @Entity
@@ -16,4 +18,8 @@ public class CampaignEntity {
     private Long id;
 
     private String name;
+
+    @OneToOne
+    @JoinColumn(name = "product_id")
+    private ProductEntity product;
 }

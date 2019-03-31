@@ -19,5 +19,7 @@ public class CampaignDto {
         private Long impressions;
         private Long spends;
         private Long clicks;
+        private int year;
+        private Long sells; // from product statistic
     }
 }
