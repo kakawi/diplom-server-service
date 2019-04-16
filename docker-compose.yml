@@ -1,0 +1,17 @@
+version: "3.3"
+
+services:
+  adswerb:
+    container_name: adsweb__postgresql
+    image: postgres:9.5
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=diplom
+      - POSTGRES_PASSWORD=diplom
+      - POSTGRES_DB=diplom
+    networks:
+      - awnet
+networks:
+  awnet:
+    driver: bridge
