@@ -11,4 +11,6 @@ public class CampaignSearchableObject {
     private final boolean isFetchStatistics;
     private final boolean isFetchCurrentBudget;
     private final boolean isFetchProductStatistic;
+
+    private PageRequestObject pageRequest;
 }

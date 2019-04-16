@@ -10,8 +10,12 @@ import com.hlebon.adsweb.repository.entity.ProductStatisticsEntity;
 import com.hlebon.adsweb.service.mapper.CampaignMapper;
 import com.hlebon.adsweb.service.mapper.CampaignStatisticMapper;
 import com.hlebon.adsweb.service.searchable.CampaignSearchableObject;
+import com.hlebon.adsweb.service.searchable.PageRequestObject;
 import com.hlebon.adsweb.web.dto.CampaignDto;
+import com.hlebon.adsweb.web.dto.CampaignListDto;
+import com.hlebon.adsweb.web.dto.PageableDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -40,7 +44,22 @@ public class CampaignService {
 
     @Transactional(readOnly = true)
     public List<CampaignDto> findAll(final CampaignSearchableObject campaignSearchableObject) {
-        final List<CampaignEntity> allCampaigns = campaignDao.findAll();
+        final PageRequestObject pageRequestObject = campaignSearchableObject.getPageRequest();
+        final PageRequest pageRequest;
+        if (pageRequestObject.getSort() == null) {
+            pageRequest = PageRequest.of(pageRequestObject.getPage() - 1, pageRequestObject.getSize());
+        } else {
+            final Sort.Direction direction;
+            if (pageRequestObject.getOrder().equals("ASC")) {
+                direction = Sort.Direction.ASC;
+            } else {
+                direction = Sort.Direction.DESC;
+            }
+            pageRequest = PageRequest.of(pageRequestObject.getPage() - 1, pageRequestObject.getSize(), Sort.by(new Sort.Order(direction, pageRequestObject.getSort())));
+        }
+
+
+        final Page<CampaignEntity> allCampaigns = campaignDao.findAll(pageRequest);
         final List<CampaignDto> result = allCampaigns.stream().map(campaignMapper::mapToDto).collect(Collectors.toList());
         if (campaignSearchableObject.isFetchStatistics()) {
             result.forEach(this::fillStatistics);
@@ -52,6 +71,48 @@ public class CampaignService {
                 });
             }
         }
+
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public CampaignListDto findPage(final CampaignSearchableObject campaignSearchableObject) {
+        final PageRequestObject pageRequestObject = campaignSearchableObject.getPageRequest();
+        final PageRequest pageRequest;
+        if (pageRequestObject.getSort() == null) {
+            pageRequest = PageRequest.of(pageRequestObject.getPage() - 1, pageRequestObject.getSize());
+        } else {
+            final Sort.Direction direction;
+            if (pageRequestObject.getOrder().equals("ASC")) {
+                direction = Sort.Direction.ASC;
+            } else {
+                direction = Sort.Direction.DESC;
+            }
+            pageRequest = PageRequest.of(pageRequestObject.getPage() - 1, pageRequestObject.getSize(), Sort.by(new Sort.Order(direction, pageRequestObject.getSort())));
+        }
+
+
+        final Page<CampaignEntity> allCampaigns = campaignDao.findAll(pageRequest);
+        final List<CampaignDto> campaignDtos = allCampaigns.stream().map(campaignMapper::mapToDto).collect(Collectors.toList());
+        if (campaignSearchableObject.isFetchStatistics()) {
+            campaignDtos.forEach(this::fillStatistics);
+            if (campaignSearchableObject.isFetchProductStatistic()) {
+                campaignDtos.forEach(c -> {
+                    final Set<CampaignDto.CampaignStatisticDto> campaignStatisticDtos = c.getCampaignStatistics();
+                    final ProductEntity product = productDao.findByCampaign_Id(c.getId());
+                    fillStatistics(campaignStatisticDtos, product.getId());
+                });
+            }
+        }
+
+        final CampaignListDto result = new CampaignListDto();
+        allCampaigns.getTotalElements();
+        result.setCampaigns(campaignDtos);
+        result.setPageable(new PageableDto(
+                allCampaigns.getTotalPages(),
+                campaignSearchableObject.getPageRequest().getPage(),
+                campaignSearchableObject.getPageRequest().getSize()
+        ));
 
         return result;
     }
