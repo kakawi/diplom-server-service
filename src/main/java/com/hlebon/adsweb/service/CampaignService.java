@@ -2,14 +2,17 @@ package com.hlebon.adsweb.service;
 
 import com.hlebon.adsweb.repository.dao.CampaignDao;
 import com.hlebon.adsweb.repository.dao.CampaignStatisticDao;
+import com.hlebon.adsweb.repository.dao.CampaignStatisticDayDao;
 import com.hlebon.adsweb.repository.dao.ProductDao;
 import com.hlebon.adsweb.repository.dao.ProductStatisticDao;
 import com.hlebon.adsweb.repository.entity.CampaignEntity;
+import com.hlebon.adsweb.repository.entity.CampaignStatisticDayEntity;
 import com.hlebon.adsweb.repository.entity.ProductEntity;
 import com.hlebon.adsweb.repository.entity.ProductStatisticsEntity;
 import com.hlebon.adsweb.service.mapper.CampaignMapper;
 import com.hlebon.adsweb.service.mapper.CampaignStatisticMapper;
 import com.hlebon.adsweb.service.searchable.CampaignSearchableObject;
+import com.hlebon.adsweb.service.searchable.CampaignSearchableWithTypeObject;
 import com.hlebon.adsweb.service.searchable.PageRequestObject;
 import com.hlebon.adsweb.web.dto.CampaignDto;
 import com.hlebon.adsweb.web.dto.CampaignListDto;
@@ -22,13 +25,19 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +45,7 @@ public class CampaignService {
 
     private final CampaignDao campaignDao;
     private final CampaignStatisticDao campaignStatisticDao;
+    private final CampaignStatisticDayDao campaignStatisticDayDao;
     private final ProductDao productDao;
     private final ProductStatisticDao productStatisticDao;
 
@@ -60,7 +70,7 @@ public class CampaignService {
 
 
         final Page<CampaignEntity> allCampaigns = campaignDao.findAll(pageRequest);
-        final List<CampaignDto> result = allCampaigns.stream().map(campaignMapper::mapToDto).collect(Collectors.toList());
+        final List<CampaignDto> result = allCampaigns.stream().map(campaignMapper::mapToDto).collect(toList());
         if (campaignSearchableObject.isFetchStatistics()) {
             result.forEach(this::fillStatistics);
             if (campaignSearchableObject.isFetchProductStatistic()) {
@@ -73,6 +83,111 @@ public class CampaignService {
         }
 
         return result;
+    }
+
+    public CampaignStatistic findValueByPeriod(final long id, final CampaignSearchableWithTypeObject campaignObject) {
+        final Optional<CampaignEntity> campaign = campaignDao.findById(id);
+        if (!campaign.isPresent()) {
+            return null;
+        }
+        final CampaignEntity campaignEntity = campaign.get();
+        final CampaignDto campaignDto = campaignMapper.mapToDto(campaignEntity);
+        final CampaignStatistic result = new CampaignStatistic(campaignDto.getId(), campaignDto.getName());
+        if (campaignObject.isFetchStatistics()) {
+            final PeriodType type = campaignObject.getType();
+            final LocalDate startDate = campaignObject.getStartDate();
+            final LocalDate endDate = campaignObject.getEndDate() != null ? campaignObject.getEndDate() : LocalDate.now();
+            final List<CampaignStatisticDayEntity> statistics =
+                    campaignStatisticDayDao.findByCampaign_IdAndDateStatisticBetweenOrderByDateStatistic(result.getId(), startDate, endDate);
+
+            final List<CampaignStatistic.Statistic.CampaignStatisticDto> campaignStatistics;
+            switch (type) {
+                case DAY: {
+                    campaignStatistics = statistics.stream().map(s -> {
+                        final Long impressions = s.getImpressions();
+                        final Long clicks = s.getClicks();
+                        final Long spends = s.getSpends();
+                        final LocalDate date = s.getDateStatistic();
+                        final CampaignStatistic.Statistic.CampaignStatisticDto.DayPeriod period = new CampaignStatistic.Statistic.CampaignStatisticDto.DayPeriod(date);
+                        return new CampaignStatistic.Statistic.CampaignStatisticDto(impressions, clicks, spends, period);
+                    }).collect(toList());
+                    break;
+                }
+                case WEEK: {
+                    campaignStatistics = new ArrayList<>();
+                    final Map<Integer, Map<Integer, List<CampaignStatisticDayEntity>>> weekMap = statistics
+                            .stream()
+                            .sorted(Comparator.comparing(CampaignStatisticDayEntity::getYear))
+                            .collect(groupingBy(
+                                    CampaignStatisticDayEntity::getYear,
+                                    groupingBy(
+                                            CampaignStatisticDayEntity::getWeekNumber, toList()
+                                    )
+                            ));
+
+                    for (Map.Entry<Integer, Map<Integer, List<CampaignStatisticDayEntity>>> currentYear : weekMap.entrySet()) {
+                        final Integer year = currentYear.getKey();
+                        final Map<Integer, List<CampaignStatisticDayEntity>> currentWeek = currentYear.getValue();
+                        List<CampaignStatistic.Statistic.CampaignStatisticDto> currentYearStatistic = currentWeek.entrySet().stream().map(entry -> {
+                            final Integer weekNumber = entry.getKey();
+                            final List<CampaignStatisticDayEntity> stats = entry.getValue();
+                            long impressions = 0;
+                            long clicks = 0;
+                            long spends = 0;
+                            for (CampaignStatisticDayEntity stat : stats) {
+                                impressions += stat.getImpressions();
+                                clicks += stat.getClicks();
+                                spends += stat.getSpends();
+                            }
+                            final CampaignStatistic.Statistic.CampaignStatisticDto.WeekPeriod weekPeriod = new CampaignStatistic.Statistic.CampaignStatisticDto.WeekPeriod(weekNumber, year);
+                            return new CampaignStatistic.Statistic.CampaignStatisticDto(impressions, clicks, spends, weekPeriod);
+                        }).sorted(Comparator.comparing(c -> c.getPeriod().getPeriod())).collect(toList());
+                        campaignStatistics.addAll(currentYearStatistic);
+                    }
+                    break;
+                }
+                case MONTH: {
+                    campaignStatistics = new ArrayList<>();
+                    final Map<Integer, Map<Integer, List<CampaignStatisticDayEntity>>> monthMap = statistics
+                            .stream()
+                            .sorted(Comparator.comparing(CampaignStatisticDayEntity::getYear))
+                            .collect(groupingBy(
+                                    CampaignStatisticDayEntity::getYear,
+                                    groupingBy(
+                                            CampaignStatisticDayEntity::getMonth, toList()
+                                    )
+                            ));
+
+                    for (Map.Entry<Integer, Map<Integer, List<CampaignStatisticDayEntity>>> currentYear : monthMap.entrySet()) {
+                        final Integer year = currentYear.getKey();
+                        final Map<Integer, List<CampaignStatisticDayEntity>> currentMonth = currentYear.getValue();
+                        List<CampaignStatistic.Statistic.CampaignStatisticDto> currentYearStatistic = currentMonth.entrySet().stream().map(entry -> {
+                            final Integer monthNumber = entry.getKey();
+                            final List<CampaignStatisticDayEntity> stats = entry.getValue();
+                            long impressions = 0;
+                            long clicks = 0;
+                            long spends = 0;
+                            for (CampaignStatisticDayEntity stat : stats) {
+                                impressions += stat.getImpressions();
+                                clicks += stat.getClicks();
+                                spends += stat.getSpends();
+                            }
+                            final CampaignStatistic.Statistic.CampaignStatisticDto.MontnPeriod monthPeriod = new CampaignStatistic.Statistic.CampaignStatisticDto.MontnPeriod(monthNumber, year);
+                            return new CampaignStatistic.Statistic.CampaignStatisticDto(impressions, clicks, spends, monthPeriod);
+                        }).sorted(Comparator.comparing(c -> c.getPeriod().getPeriod())).collect(toList());
+                        campaignStatistics.addAll(currentYearStatistic);
+                    }
+                    break;
+                }
+                default:
+                    throw new IllegalArgumentException("Unsupported type " + type);
+            }
+
+            final CampaignStatistic.Statistic statistic = new CampaignStatistic.Statistic(type, campaignStatistics);
+            result.setStatistic(statistic);
+        }
+        return result;
+
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +208,7 @@ public class CampaignService {
 
 
         final Page<CampaignEntity> allCampaigns = campaignDao.findAll(pageRequest);
-        final List<CampaignDto> campaignDtos = allCampaigns.stream().map(campaignMapper::mapToDto).collect(Collectors.toList());
+        final List<CampaignDto> campaignDtos = allCampaigns.stream().map(campaignMapper::mapToDto).collect(toList());
         if (campaignSearchableObject.isFetchStatistics()) {
             campaignDtos.forEach(this::fillStatistics);
             if (campaignSearchableObject.isFetchProductStatistic()) {

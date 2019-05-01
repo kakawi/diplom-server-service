@@ -1,16 +1,22 @@
 package com.hlebon.adsweb.web;
 
 import com.hlebon.adsweb.service.CampaignService;
+import com.hlebon.adsweb.service.CampaignStatistic;
+import com.hlebon.adsweb.service.PeriodType;
 import com.hlebon.adsweb.service.searchable.CampaignSearchableObject;
+import com.hlebon.adsweb.service.searchable.CampaignSearchableWithTypeObject;
 import com.hlebon.adsweb.service.searchable.PageRequestObject;
 import com.hlebon.adsweb.web.dto.CampaignDto;
 import com.hlebon.adsweb.web.dto.CampaignListDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/campaigns")
@@ -51,6 +57,20 @@ public class CampaignController {
     ) {
         final CampaignSearchableObject campaignSearchableObject = new CampaignSearchableObject(isFetchStatistic, isFetchCurrentValue, isFetchProductStatistic);
         return campaignService.findById(campaignId, campaignSearchableObject);
+    }
+
+    @GetMapping("/{campaignId}/type")
+    public CampaignStatistic findByIdType(
+            @PathVariable("campaignId") final Long campaignId,
+            @RequestParam(value = "isFetchStatistic", defaultValue = "false") boolean isFetchStatistic,
+            @RequestParam(value = "isFetchCurrentValue", defaultValue = "false") boolean isFetchCurrentValue,
+            @RequestParam(value = "isFetchProductStatistic", defaultValue = "false") boolean isFetchProductStatistic,
+            @RequestParam(value = "periodType", defaultValue = "false") PeriodType type,
+            @RequestParam(value = "startDate", defaultValue = "false") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value = "endDate", defaultValue = "false") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        final CampaignSearchableWithTypeObject campaignObject = new CampaignSearchableWithTypeObject(isFetchStatistic, isFetchCurrentValue, isFetchProductStatistic, type, startDate, endDate);
+        return campaignService.findValueByPeriod(campaignId, campaignObject);
     }
 
 }
